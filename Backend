@@ -1,0 +1,289 @@
+import psycopg2
+from psycopg2 import sql
+
+class DatabaseManager:
+    def __init__(self, dbname, user, password, host, port):
+        self.conn_params = {
+            "dbname": "PMS_app",
+            "user": "postgres",
+            "password": "1234",
+            "host": "localhost",
+            "port": 5432
+        }
+
+    def _connect(self):
+        """Establishes a connection to the database."""
+        try:
+            conn = psycopg2.connect(**self.conn_params)
+            return conn
+        except psycopg2.OperationalError as e:
+            print(f"Error connecting to database: {e}")
+            return None
+
+    ### Employee CRUD Operations
+    def create_employee(self, name, manager_id=None):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("INSERT INTO employees (name, manager_id) VALUES (%s, %s)"),
+                    (name, manager_id)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def read_employees(self):
+        conn = self._connect()
+        if not conn: return []
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT employee_id, name, manager_id FROM employees ORDER BY name")
+                return cur.fetchall()
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def get_employee_by_id(self, employee_id):
+        conn = self._connect()
+        if not conn: return None
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("SELECT employee_id, name, manager_id FROM employees WHERE employee_id = %s"),
+                    (employee_id,)
+                )
+                return cur.fetchone()
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return None
+        finally:
+            conn.close()
+    
+    ### Goal CRUD Operations
+    def create_goal(self, employee_id, goal_description, due_date, status='Draft'):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("INSERT INTO goals (employee_id, goal_description, due_date, status) VALUES (%s, %s, %s, %s)"),
+                    (employee_id, goal_description, due_date, status)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+            
+    def read_goals(self, employee_id=None):
+        conn = self._connect()
+        if not conn: return []
+        try:
+            with conn.cursor() as cur:
+                if employee_id:
+                    cur.execute(
+                        sql.SQL("SELECT * FROM goals WHERE employee_id = %s ORDER BY due_date"),
+                        (employee_id,)
+                    )
+                else:
+                    cur.execute("SELECT * FROM goals ORDER BY employee_id, due_date")
+                return cur.fetchall()
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return []
+        finally:
+            conn.close()
+            
+    def update_goal_status(self, goal_id, new_status):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("UPDATE goals SET status = %s WHERE goal_id = %s"),
+                    (new_status, goal_id)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+            
+    ### Task CRUD Operations
+    def create_task(self, goal_id, task_description):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("INSERT INTO tasks (goal_id, task_description) VALUES (%s, %s)"),
+                    (goal_id, task_description)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+            
+    def read_tasks(self, goal_id):
+        conn = self._connect()
+        if not conn: return []
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("SELECT * FROM tasks WHERE goal_id = %s ORDER BY task_id"),
+                    (goal_id,)
+                )
+                return cur.fetchall()
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return []
+        finally:
+            conn.close()
+            
+    def approve_task(self, task_id):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("UPDATE tasks SET is_approved = TRUE WHERE task_id = %s"),
+                    (task_id,)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def complete_task(self, task_id):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("UPDATE tasks SET is_completed = TRUE WHERE task_id = %s"),
+                    (task_id,)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+            
+    ### Feedback CRUD Operations
+    def create_feedback(self, goal_id, manager_id, feedback_text):
+        conn = self._connect()
+        if not conn: return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("INSERT INTO feedback (goal_id, manager_id, feedback_text) VALUES (%s, %s, %s)"),
+                    (goal_id, manager_id, feedback_text)
+                )
+                conn.commit()
+            return True
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return False
+        finally:
+            conn.close()
+            
+    def read_feedback(self, employee_id=None):
+        conn = self._connect()
+        if not conn: return []
+        try:
+            with conn.cursor() as cur:
+                if employee_id:
+                    query = """
+                    SELECT f.feedback_id, f.feedback_text, f.feedback_date, g.goal_description, e_mgr.name AS manager_name
+                    FROM feedback f
+                    JOIN goals g ON f.goal_id = g.goal_id
+                    JOIN employees e_mgr ON f.manager_id = e_mgr.employee_id
+                    WHERE g.employee_id = %s
+                    ORDER BY f.feedback_date DESC
+                    """
+                    cur.execute(query, (employee_id,))
+                else:
+                    query = """
+                    SELECT f.feedback_id, f.feedback_text, f.feedback_date, g.goal_description, e_mgr.name AS manager_name
+                    FROM feedback f
+                    JOIN goals g ON f.goal_id = g.goal_id
+                    JOIN employees e_mgr ON f.manager_id = e_mgr.employee_id
+                    ORDER BY f.feedback_date DESC
+                    """
+                    cur.execute(query)
+                return cur.fetchall()
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return []
+        finally:
+            conn.close()
+            
+    ### Business Insights (Aggregations)
+    def get_goal_insights(self):
+        conn = self._connect()
+        if not conn: return {}
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        COUNT(*) AS total_goals,
+                        COUNT(CASE WHEN status = 'Completed' THEN 1 END) AS completed_goals,
+                        COUNT(CASE WHEN status = 'In Progress' THEN 1 END) AS in_progress_goals,
+                        AVG(EXTRACT(DAY FROM (NOW() - due_date))) AS avg_days_to_due,
+                        MIN(due_date) AS soonest_due_date,
+                        MAX(due_date) AS furthest_due_date
+                    FROM goals
+                """)
+                result = cur.fetchone()
+                if result:
+                    keys = ['total_goals', 'completed_goals', 'in_progress_goals', 'avg_days_to_due', 'soonest_due_date', 'furthest_due_date']
+                    return dict(zip(keys, result))
+                return {}
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return {}
+        finally:
+            conn.close()
+
+    def get_task_insights(self):
+        conn = self._connect()
+        if not conn: return {}
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        COUNT(*) AS total_tasks,
+                        COUNT(CASE WHEN is_approved = TRUE THEN 1 END) AS approved_tasks,
+                        COUNT(CASE WHEN is_completed = TRUE THEN 1 END) AS completed_tasks
+                    FROM tasks
+                """)
+                result = cur.fetchone()
+                if result:
+                    keys = ['total_tasks', 'approved_tasks', 'completed_tasks']
+                    return dict(zip(keys, result))
+                return {}
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+            return {}
+        finally:
+            conn.close()
